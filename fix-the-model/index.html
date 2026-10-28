@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fix the Model</title>
+<meta name="description" content="A 5-minute game: a mango-ripeness AI is failing. Choose better training data and fix it.">
+<style>
+  :root{
+    --maroon:#760F0B; --maroon-dark:#4E0A08; --gold:#D6A030; --gold-tint:#FCF4E2;
+    --bg:#FAF7F2; --card:#FFFFFF; --ink:#232323; --muted:#5F5F64; --line:#E4DED6;
+    --ok:#1F7A4D; --ok-tint:#E6F4EC; --bad:#A0300C; --bad-tint:#FBECE6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Times New Roman",Times,"Liberation Serif",serif;
+    -webkit-tap-highlight-color:transparent}
+  body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+  header{background:var(--maroon);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  header h1{font-size:17px;margin:0;font-weight:700}
+  .pill{background:var(--gold);color:var(--maroon-dark);font-weight:800;font-size:14px;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px 16px 28px}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--maroon);margin:0 0 6px}
+  h2{font-size:25px;line-height:1.2;margin:0 0 10px}
+  h3{font-size:17px;margin:0 0 8px}
+  p{font-size:16px;line-height:1.5;margin:0 0 12px}
+  .muted{color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  button{font:inherit;cursor:pointer;border:none}
+  .primary{display:block;width:100%;background:var(--maroon);color:#fff;font-size:18px;font-weight:800;border-radius:12px;padding:16px;margin-top:14px}
+  .primary:disabled{background:#B9A9A4;cursor:default}
+  .ghost{display:block;width:100%;background:transparent;color:var(--maroon);font-size:16px;font-weight:700;border:2px solid var(--maroon);border-radius:12px;padding:13px;margin-top:10px;text-decoration:none;text-align:center}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .m{background:#fff;border:2px solid var(--line);border-radius:12px;padding:6px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:96px;justify-content:flex-end;position:relative}
+  .m svg{display:block}
+  .m .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+  .m .lab.r{color:#B7791F} .m .lab.u{color:#2F7D32}
+  .m.sel{border-color:var(--maroon);background:var(--gold-tint)}
+  .m.sel::after{content:"✓";position:absolute;top:4px;right:6px;font-weight:900;color:var(--maroon);font-size:14px}
+  .m.wrong{border-color:var(--bad);background:var(--bad-tint)}
+  .m.right{border-color:#BFDCCB}
+  .m .pred{font-size:11px;font-weight:800}
+  .m.wrong .pred{color:var(--bad)} .m.right .pred{color:var(--ok)}
+  .acc{display:flex;align-items:baseline;gap:10px;margin:2px 0 6px}
+  .acc b{font-size:48px;font-weight:900;line-height:1}
+  .acc.low b{color:var(--bad)} .acc.high b{color:var(--ok)} .acc.mid b{color:#B7791F}
+  .meter{height:12px;background:#F1ECE5;border-radius:8px;overflow:hidden;margin-bottom:12px}
+  .meter i{display:block;height:100%;width:0;transition:width .8s}
+  .lesson{border-left:4px solid var(--maroon);background:#FBEFED;padding:12px 14px;border-radius:6px;font-size:15px;line-height:1.5}
+  .opts{display:grid;gap:8px}
+  .opt{background:#fff;border:2px solid var(--line);border-radius:12px;padding:13px 12px;font-size:16px;font-weight:700;text-align:left;color:var(--ink)}
+  .opt.good{border-color:var(--ok);background:var(--ok-tint)}
+  .opt.badc{border-color:var(--bad);background:var(--bad-tint)}
+  .count{font-weight:800;color:var(--maroon)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:0 0 10px}
+  .big{font-size:56px;font-weight:900;color:var(--maroon);line-height:1;margin:6px 0}
+  ol.lessons{padding-left:20px;margin:6px 0 0}
+  ol.lessons li{margin-bottom:10px;line-height:1.45}
+  .hidden{display:none !important}
+  footer{text-align:center;font-size:12px;color:var(--muted);padding:10px 16px 18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Fix the Model</h1>
+  <span class="pill" id="stage">Step 1 of 3</span>
+</header>
+<main>
+
+  <!-- Intro -->
+  <section id="intro">
+    <p class="eyebrow">CSE–AI Association · Game 3</p>
+    <h2>Help a farmer build an AI!</h2>
+    <p>A farmer in Kottayam wants an AI that sorts mangoes into <b>ripe</b> and <b>unripe</b>. A ripe mango is <b>yellow</b>. An unripe mango is <b>green</b>. Size does not matter.</p>
+    <p>Someone trained an AI, but it keeps making mistakes. <b>Can you find the problem and fix it?</b></p>
+    <p class="muted">3 steps · about 5 minutes</p>
+    <button class="primary" id="start">Start</button>
+  </section>
+
+  <!-- Step 1: the broken model -->
+  <section id="s1" class="hidden">
+    <p class="eyebrow">Step 1 · Why is the AI wrong?</p>
+    <div class="card">
+      <h3>The 4 mangoes it learned from</h3>
+      <div class="grid" id="oldtrain"></div>
+    </div>
+    <div class="card">
+      <h3>Test: 12 new mangoes from the farm</h3>
+      <div class="legend"><span>Green border = AI correct</span><span>Red = AI wrong</span></div>
+      <div class="grid" id="test1"></div>
+      <div style="height:12px"></div>
+      <div class="acc low" id="acc1"><b>…</b><span>correct</span></div>
+      <div class="meter"><i id="m1" style="background:var(--bad)"></i></div>
+    </div>
+    <div class="card">
+      <h3>Look at the red ones. Is the AI looking at colour or size?</h3>
+      <div class="opts" id="why"></div>
+      <div id="whyans" class="hidden" style="margin-top:12px">
+        <div class="lesson"><b>The AI is looking at size, not colour.</b> In the training data, every ripe mango was big and every unripe mango was small. So “big” became a shortcut for “ripe”. Small ripe mangoes and big unripe mangoes fool it. This is <b>bias in the training data</b>, the same thing you saw in the live demo.</div>
+        <button class="primary" id="go2">Fix it</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: choose training data -->
+  <section id="s2" class="hidden">
+    <p class="eyebrow">Step 2 · Now you’re the AI engineer!</p>
+    <h2>Choose mangoes to teach your AI</h2>
+    <p>Tap to pick <b>up to 6</b> mangoes. These are your <b>training data</b>. Choose carefully: the AI can only learn from what you show it.</p>
+    <div class="card">
+      <div class="grid" id="pool"></div>
+      <p style="margin:12px 0 0">Selected: <span class="count" id="cnt">0</span> / 6 <span class="muted" id="need"></span></p>
+    </div>
+    <button class="primary" id="train" disabled>Train my AI</button>
+  </section>
+
+  <!-- Step 3: result -->
+  <section id="s3" class="hidden">
+    <p class="eyebrow">Step 3 · Let’s test your AI!</p>
+    <div class="card">
+      <h3>Same 12 test mangoes</h3>
+      <div class="grid" id="test2"></div>
+      <div style="height:12px"></div>
+      <div class="acc" id="acc2"><b>…</b><span>correct</span></div>
+      <div class="meter"><i id="m2"></i></div>
+      <div class="lesson" id="res"></div>
+    </div>
+    <button class="ghost" id="retry">Try different mangoes</button>
+    <button class="primary" id="done">Finish</button>
+  </section>
+
+  <!-- End -->
+  <section id="end" class="hidden">
+    <p class="eyebrow">Your result</p>
+    <p>The first AI scored <b id="e1"></b>. Your best AI scored:</p>
+    <div class="big" id="e2"></div>
+    <div class="card">
+      <p class="eyebrow">What you just learned</p>
+      <ol class="lessons">
+        <li>AI learns <b>whatever pattern it finds in the examples</b>, even one we did not want, like size or background.</li>
+        <li><b>Good examples help AI learn better.</b> You did not change the AI at all. You only changed the examples, and the score changed.</li>
+        <li><b>Show AI different kinds of examples:</b> small and big, green and yellow, in every combination.</li>
+      </ol>
+    </div>
+    <p class="muted">Raise your hand if your model reached 100%.</p>
+    <a class="ghost" id="code" target="_blank" rel="noopener">See how this game is built on GitHub</a>
+    <button class="ghost" id="again">Play again</button>
+  </section>
+</main>
+<footer>Dr. Ansith S · FACTS-H Lab, IIIT Kottayam<br>A simple AI model (a nearest-centroid classifier) that looks at two things: colour and size.</footer>
+
+<script>
+// ---- Data ---------------------------------------------------------------
+// Each mango: c = colour (0 green → 1 yellow), s = size (0 small → 1 big).
+// The truth: ripe if and only if the colour is yellow (c > 0.5).
+const CODE_URL = "https://github.com/ansiths-iiitk/ai-games";
+const OLD_TRAIN = [ {c:.72,s:.92}, {c:.68,s:.96}, {c:.30,s:.06}, {c:.34,s:.10} ];
+const TEST = [
+  {c:.90,s:.85},{c:.78,s:.70},{c:.88,s:.20},{c:.75,s:.12},{c:.84,s:.32},{c:.70,s:.90},
+  {c:.10,s:.15},{c:.22,s:.28},{c:.15,s:.88},{c:.28,s:.75},{c:.12,s:.62},{c:.30,s:.10}
+];
+const POOL = [
+  {c:.88,s:.90},{c:.12,s:.88},{c:.82,s:.15},{c:.18,s:.12},
+  {c:.76,s:.55},{c:.25,s:.50},{c:.92,s:.30},{c:.08,s:.70},
+  {c:.85,s:.65},{c:.20,s:.35},{c:.80,s:.80},{c:.15,s:.20}
+];
+// -------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const ripe = m => m.c > .5;
+const show = id => ["intro","s1","s2","s3","end"].forEach(x => $(x).classList.toggle("hidden", x !== id));
+let picked = new Set(), best = 0, oldAcc = 0;
+
+function mangoSVG(m){
+  // colour from green (c=0) to yellow-orange (c=1); size 22..40 px
+  const g = [96,160,52], y = [242,178,40];
+  const col = g.map((v,i) => Math.round(v + (y[i]-v)*m.c));
+  const rx = 16 + 12*m.s, ry = 12 + 9*m.s;
+  const w = 64, h = 52, cx = w/2, cy = h - ry - 2;
+  const fill = `rgb(${col.join(",")})`, dark = `rgb(${col.map(v => Math.round(v*.78)).join(",")})`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+    <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="${dark}" stroke-width="1.5" transform="rotate(-18 ${cx} ${cy})"/>
+    <ellipse cx="${cx - rx*.35}" cy="${cy - ry*.4}" rx="${rx*.28}" ry="${ry*.18}" fill="#fff" opacity=".35" transform="rotate(-18 ${cx} ${cy})"/>
+    <path d="M${cx + rx*.5} ${cy - ry*.9} q4 -7 9 -8" stroke="#5B3A1E" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M${cx + rx*.55} ${cy - ry*.95} q8 -4 12 2 q-7 3 -12 -2z" fill="#3E8E3E"/></svg>`;
+}
+function cell(m, extra, labelHTML){
+  return `<div class="m ${extra||""}">${mangoSVG(m)}${labelHTML}</div>`;
+}
+const lab = m => `<span class="lab ${ripe(m)?"r":"u"}">${ripe(m)?"ripe":"unripe"}</span>`;
+
+// nearest-centroid classifier on (colour, size)
+function train(data){
+  const avg = arr => ({ c: arr.reduce((t,m)=>t+m.c,0)/arr.length, s: arr.reduce((t,m)=>t+m.s,0)/arr.length });
+  const R = data.filter(ripe), U = data.filter(m => !ripe(m));
+  return { r: avg(R), u: avg(U) };
+}
+function predict(model, m){
+  const d = (a) => (a.c-m.c)**2 + (a.s-m.s)**2;
+  return d(model.r) < d(model.u);
+}
+function runTest(model, gridId, accId, meterId){
+  let ok = 0;
+  $(gridId).innerHTML = TEST.map(m => {
+    const p = predict(model, m), good = p === ripe(m);
+    if (good) ok++;
+    return cell(m, good ? "right" : "wrong", `<span class="pred">AI: ${p?"ripe":"unripe"}</span>`);
+  }).join("");
+  const pct = Math.round(100*ok/TEST.length);
+  const acc = $(accId);
+  acc.className = "acc " + (pct >= 100 ? "high" : pct >= 75 ? "mid" : "low");
+  acc.querySelector("b").textContent = pct + "%";
+  const bar = $(meterId);
+  bar.style.background = pct >= 100 ? "var(--ok)" : pct >= 75 ? "#B7791F" : "var(--bad)";
+  setTimeout(() => bar.style.width = pct + "%", 60);
+  return pct;
+}
+
+function step1(){
+  show("s1"); $("stage").textContent = "Step 1 of 3";
+  $("oldtrain").innerHTML = OLD_TRAIN.map(m => cell(m, "", lab(m))).join("");
+  oldAcc = runTest(train(OLD_TRAIN), "test1", "acc1", "m1");
+  const opts = [
+    ["Colour", false],
+    ["Size", true],
+    ["It needs a bigger computer", false],
+    ["It is just guessing", false]
+  ];
+  $("whyans").classList.add("hidden");
+  $("why").innerHTML = opts.map(([t,g],i) => `<button class="opt" data-i="${i}" data-g="${g}">${t}</button>`).join("");
+  document.querySelectorAll("#why .opt").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#why .opt").forEach(x => { x.disabled = true; if (x.dataset.g === "true") x.classList.add("good"); });
+    if (b.dataset.g !== "true") b.classList.add("badc");
+    $("whyans").classList.remove("hidden");
+    setTimeout(() => $("whyans").scrollIntoView({behavior:"smooth", block:"start"}), 120);
+  });
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function step2(){
+  show("s2"); $("stage").textContent = "Step 2 of 3";
+  picked = new Set();
+  renderPool();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function renderPool(){
+  $("pool").innerHTML = POOL.map((m,i) => `<div class="m ${picked.has(i)?"sel":""}" data-i="${i}" role="button" tabindex="0">${mangoSVG(m)}${lab(m)}</div>`).join("");
+  document.querySelectorAll("#pool .m").forEach(el => el.onclick = () => {
+    const i = +el.dataset.i;
+    if (picked.has(i)) picked.delete(i); else if (picked.size < 6) picked.add(i);
+    renderPool();
+  });
+  const data = [...picked].map(i => POOL[i]);
+  const hasR = data.some(ripe), hasU = data.some(m => !ripe(m));
+  $("cnt").textContent = picked.size;
+  $("need").textContent = picked.size && !(hasR && hasU) ? "· pick at least one ripe and one unripe" : "";
+  $("train").disabled = !(hasR && hasU);
+}
+$("train").onclick = () => {
+  show("s3"); $("stage").textContent = "Step 3 of 3";
+  const data = [...picked].map(i => POOL[i]);
+  const pct = runTest(train(data), "test2", "acc2", "m2");
+  best = Math.max(best, pct);
+  $("res").innerHTML = pct >= 100
+    ? "<b>Perfect.</b> Your data had big and small mangoes on both sides, so size stopped being a shortcut. The only pattern left was colour, the right one."
+    : pct > oldAcc
+      ? "<b>Better, but not perfect.</b> Some size bias is still in your data. Try including big unripe and small ripe mangoes too."
+      : "<b>Still biased.</b> Look at your choices: are your ripe mangoes mostly one size? Mix big and small on both sides.";
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+$("retry").onclick = step2;
+$("done").onclick = () => {
+  show("end"); $("stage").textContent = "Done";
+  $("e1").textContent = oldAcc + "%";
+  $("e2").textContent = best + "%";
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+$("go2").onclick = step2;
+$("start").onclick = step1;
+$("again").onclick = () => { best = 0; step1(); };
+$("code").href = CODE_URL;
+</script>
+</body>
+</html>

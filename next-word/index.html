@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guess the Next Word</title>
+<meta name="description" content="A 4-minute game: think like a chatbot and predict the next word.">
+<style>
+  :root{
+    --maroon:#760F0B; --maroon-dark:#4E0A08; --gold:#D6A030; --gold-tint:#FCF4E2;
+    --bg:#FAF7F2; --card:#FFFFFF; --ink:#232323; --muted:#5F5F64; --line:#E4DED6;
+    --ok:#1F7A4D; --ok-tint:#E6F4EC;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Times New Roman",Times,"Liberation Serif",serif;
+    -webkit-tap-highlight-color:transparent}
+  body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+  header{background:var(--maroon);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.2px}
+  .pill{background:var(--gold);color:var(--maroon-dark);font-weight:800;font-size:14px;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px 16px 28px}
+  .progress{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin-bottom:18px}
+  .progress>i{display:block;height:100%;background:var(--gold);width:0;transition:width .35s}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--maroon);margin:0 0 6px}
+  h2{font-size:26px;line-height:1.2;margin:0 0 10px}
+  p{font-size:16px;line-height:1.5;margin:0 0 12px}
+  .muted{color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+  .sentence{font-size:24px;line-height:1.35;font-weight:700;margin:4px 0 18px}
+  .blank{display:inline-block;min-width:96px;border-bottom:3px solid var(--maroon);color:var(--maroon);text-align:center;padding:0 4px}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  button{font:inherit;cursor:pointer;border:none}
+  .opt{background:#fff;border:2px solid var(--line);border-radius:12px;padding:14px 8px;font-size:18px;font-weight:700;color:var(--ink);min-height:58px;transition:transform .08s,border-color .15s;overflow-wrap:anywhere}
+  .opt:active{transform:scale(.97)}
+  .opt.picked{border-color:var(--maroon);background:var(--gold-tint)}
+  .opt:disabled{cursor:default}
+  .opt small{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-top:2px}
+  .primary{display:block;width:100%;background:var(--maroon);color:#fff;font-size:18px;font-weight:800;border-radius:12px;padding:16px;margin-top:16px}
+  .primary:active{background:var(--maroon-dark)}
+  .ghost{display:block;width:100%;background:transparent;color:var(--maroon);font-size:16px;font-weight:700;border:2px solid var(--maroon);border-radius:12px;padding:13px;margin-top:10px;text-decoration:none;text-align:center}
+  .bars{display:flex;flex-direction:column;gap:9px;margin:4px 0 6px}
+  .bar{display:grid;grid-template-columns:96px 1fr 46px;align-items:center;gap:8px;font-size:15px}
+  .bar .w{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar .you{display:block;font-size:11px;font-weight:800;letter-spacing:.8px;color:var(--gold);text-transform:uppercase;line-height:1}
+  .bar .track{display:block;height:22px;background:#F1ECE5;border-radius:6px;overflow:hidden}
+  .bar.mine .track{outline:2px solid var(--gold);outline-offset:1px}
+  .bar .fill{display:block;height:100%;width:0;background:#C9B9A6;border-radius:6px;transition:width .7s cubic-bezier(.2,.8,.2,1)}
+  .bar.top .fill{background:var(--maroon)}
+  .bar .pct{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  .verdict{border-radius:12px;padding:12px 14px;font-weight:700;margin:12px 0 10px}
+  .verdict.ok{background:var(--ok-tint);color:var(--ok)}
+  .verdict.no{background:var(--gold-tint);color:var(--maroon-dark)}
+  .lesson{border-left:4px solid var(--maroon);background:#FBEFED;padding:12px 14px;border-radius:6px;font-size:15px;line-height:1.5}
+  .fine{font-size:12px;color:var(--muted);margin:10px 0 0}
+  .built{font-size:22px;font-weight:700;line-height:1.4;min-height:62px;margin:6px 0 14px}
+  .built .new{color:var(--maroon);animation:pop .35s}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .big{font-size:56px;font-weight:900;color:var(--maroon);line-height:1;margin:6px 0}
+  ol.lessons{padding-left:20px;margin:6px 0 0}
+  ol.lessons li{margin-bottom:10px;line-height:1.45}
+  .steps3{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:6px;margin:12px 0 4px}
+  .steps3 div{background:var(--maroon);color:#fff;border-radius:10px;padding:12px 6px;text-align:center;font-weight:800;font-size:15px}
+  .steps3 div small{display:block;font-weight:500;font-size:11.5px;opacity:.9;margin-top:3px;line-height:1.3}
+  .steps3 span{align-self:center;color:var(--gold);font-weight:900;font-size:20px}
+  .hidden{display:none !important}
+  footer{text-align:center;font-size:12px;color:var(--muted);padding:10px 16px 18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Guess the Next Word</h1>
+  <span class="pill" id="score">0 pts</span>
+</header>
+
+<main>
+  <div class="progress"><i id="prog"></i></div>
+
+  <!-- Intro -->
+  <section id="intro">
+    <p class="eyebrow">CSE–AI Association · Game 1</p>
+    <h2>Can you guess what AI will say next?</h2>
+    <p>A chatbot like ChatGPT writes by <b>predicting the next token</b> (a word or part of a word) from everything written so far. Then it repeats that step to build the whole answer.</p>
+    <p class="muted">In this game we use whole words to keep it simple.</p>
+    <p>Pick the word you think AI would choose. <b>Guess AI’s favourite word. Get 10 points!</b></p>
+    <p class="muted">5 rounds + a bonus round · about 4 minutes</p>
+    <button class="primary" id="start">Start</button>
+  </section>
+
+  <!-- Round -->
+  <section id="round" class="hidden">
+    <p class="eyebrow" id="rlabel">Round 1 of 5</p>
+    <div class="card">
+      <div class="sentence" id="sentence"></div>
+      <div class="opts" id="opts"></div>
+    </div>
+    <div id="reveal" class="hidden">
+      <div class="card">
+        <p class="eyebrow">What would AI choose?</p>
+        <div class="bars" id="bars"></div>
+        <div class="verdict" id="verdict"></div>
+        <div class="lesson" id="lesson"></div>
+        <p class="fine">Example numbers, not from a real AI.</p>
+      </div>
+      <button class="primary" id="next">Next round</button>
+    </div>
+  </section>
+
+  <!-- Bonus: build a sentence -->
+  <section id="build" class="hidden">
+    <p class="eyebrow">Bonus round · Be the chatbot</p>
+    <h2>Write a sentence one word at a time</h2>
+    <p class="muted">Watch the choices: <b>every word you pick changes what can come next.</b> No points here, just play. The numbers are simplified examples.</p>
+    <div class="card">
+      <div class="built" id="built"></div>
+      <div class="opts" id="bopts"></div>
+    </div>
+    <div id="bdone" class="hidden">
+      <div class="card">
+        <p class="eyebrow">Now let the AI write</p>
+        <p>This AI always picks the most likely next word:</p>
+        <div class="built" id="aibuilt"></div>
+        <div class="lesson">A real chatbot does this for every token of every answer, and each new token changes the probabilities for the next one. Chatbots also pick a less likely word sometimes, on purpose. That is why the same question can get different answers.</div>
+        <p class="fine">Example numbers, not from a real AI. They do not add up to 100% because other words are also possible.</p>
+      </div>
+      <button class="primary" id="finish">See my score</button>
+    </div>
+  </section>
+
+  <!-- End -->
+  <section id="end" class="hidden">
+    <p class="eyebrow">Your result</p>
+    <div class="big" id="final">0</div>
+    <p id="finalmsg"></p>
+    <p class="muted">Matching the AI is not the same as being right. The AI picks what is <i>likely</i> in text, not what is <i>true</i>.</p>
+    <div class="card">
+      <p class="eyebrow">What you just learned</p>
+      <ol class="lessons">
+        <li>A chatbot <b>predicts the next token</b> and repeats that step to write an answer.</li>
+        <li><b>The words before it change the prediction.</b> “Python” means a language in one sentence and a snake in the next.</li>
+        <li><b>AI can predict a word without knowing if it’s true.</b> Always check.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <p class="eyebrow">Think like an AI engineer!</p>
+      <p><b>How would you build a system that predicts the next word?</b></p>
+      <p class="muted">Think for 10 seconds, then tap.</p>
+      <button class="ghost" id="showbuild">Show the answer</button>
+      <div id="buildans" class="hidden">
+        <div class="steps3">
+          <div>Data<small>huge amounts of text</small></div><span>→</span>
+          <div>Model<small>learns patterns in it</small></div><span>→</span>
+          <div>Prediction<small>the next token</small></div>
+        </div>
+        <p class="fine" style="font-size:14px;color:var(--ink)">Next, we will train a model live, on stage.</p>
+      </div>
+    </div>
+    <p class="muted">Raise your hand and show your score.</p>
+    <a class="ghost" id="code" target="_blank" rel="noopener">See how this game is built on GitHub</a>
+    <button class="ghost" id="again">Play again</button>
+  </section>
+</main>
+
+<footer>Dr. Ansith S · FACTS-H Lab, IIIT Kottayam<br>All numbers are examples, not from a real AI.</footer>
+
+<script>
+// ---- Edit these ---------------------------------------------------------
+const CODE_URL = "https://github.com/ansiths-iiitk/ai-games"; // your repository
+
+// Each round: sentence (___ marks the blank), four words with example
+// probabilities (%), and the lesson shown after the reveal.
+const ROUNDS = [
+  { s: "Good morning, ___",
+    w: [["everyone",46],["sir",27],["friends",15],["coconut",1]],
+    l: "Easy one. The AI has seen “Good morning, everyone” in a huge amount of text, so this word gets a high probability." },
+  { s: "Python is a programming ___",
+    w: [["language",93],["course",3],["tool",2],["snake",1]],
+    l: "“Programming” tells the AI which Python we mean. Remember this one: the next round uses the same word." },
+  { s: "The python swallowed a ___",
+    w: [["rat",38],["goat",24],["chicken",19],["laptop",1]],
+    l: "Same word, different sentence, completely different prediction. <b>The words before it change the prediction.</b>" },
+  { s: "After Plus Two, I decided to study ___",
+    w: [["engineering",28],["medicine",24],["science",17],["cooking",2]],
+    l: "No clear winner. When a sentence is open, the probabilities spread out and the AI is less sure." },
+  { s: "The next cricket World Cup will be won by ___",
+    w: [["India",38],["Australia",27],["England",11],["Nepal",2]],
+    l: "These numbers show which word is likely <i>in text</i>, not the real chance of winning. AI may sound confident about a future result, but it cannot know it. <b>AI can predict a word without knowing if it’s true.</b>" }
+];
+
+// Bonus round: a small tree. Each choice leads to its own next choices.
+// Every path ends in a complete sentence after three words.
+const START = "Today in class, we";
+const TREE = {
+  learned:  { p:41, next: {
+    about:   { p:46, next: { AI:44, computers:27, robots:18, coconuts:3 } },
+    to:      { p:31, next: { code:42, think:24, program:22, dance:4 } },
+    some:    { p:14, next: { Python:39, maths:31, physics:18, magic:5 } },
+    nothing: { p:5,  next: { new:52, useful:28, important:12, again:4 } } } },
+  built:    { p:24, next: {
+    a:       { p:57, next: { robot:33, model:29, chatbot:24, website:9 } },
+    our:     { p:21, next: { chatbot:36, model:30, robot:22, website:7 } },
+    an:      { p:15, next: { app:46, AI:31, engine:12, algorithm:7 } },
+    nothing: { p:4,  next: { new:49, useful:27, today:15, yet:6 } } } },
+  trained:  { p:19, next: {
+    a:       { p:52, next: { model:61, robot:16, chatbot:13, dog:5 } },
+    our:     { p:23, next: { model:48, robot:21, brains:15, team:12 } },
+    hard:    { p:14, next: { today:41, together:27, again:20, quietly:6 } },
+    an:      { p:8,  next: { AI:58, algorithm:23, app:9, elephant:2 } } } },
+  ate:      { p:3,  next: {
+    lunch:   { p:44, next: { together:39, early:24, outside:22, quietly:9 } },
+    samosas: { p:27, next: { together:41, happily:26, quickly:19, again:10 } },
+    together:{ p:16, next: { happily:34, outside:31, again:20, quickly:11 } },
+    quickly: { p:9,  next: { today:37, again:29, together:21, outside:9 } } } }
+};
+// -------------------------------------------------------------------------
+
+const $ = id => document.getElementById(id);
+const show = id => ["intro","round","build","end"].forEach(x => $(x).classList.toggle("hidden", x !== id));
+const shuffle = a => a.map(v => [Math.random(), v]).sort((x,y) => x[0]-y[0]).map(x => x[1]);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const TOTAL = ROUNDS.length + 1;
+let r = 0, score = 0, matches = 0, mine = [], node = TREE;
+
+const setScore = () => $("score").textContent = score + " pts";
+const setProg = n => $("prog").style.width = (100*n/TOTAL) + "%";
+const choices = n => Object.entries(n).map(([w,v]) => [w, typeof v === "number" ? v : v.p]);
+const topWord = n => choices(n).sort((a,b) => b[1]-a[1])[0][0];
+
+function startRound(){
+  const R = ROUNDS[r];
+  show("round"); setProg(r);
+  $("rlabel").textContent = `Round ${r+1} of ${ROUNDS.length}`;
+  $("sentence").innerHTML = esc(R.s).replace("___", '<span class="blank" id="blank">?</span>');
+  $("reveal").classList.add("hidden");
+  const box = $("opts"); box.innerHTML = "";
+  shuffle(R.w).forEach(([word]) => {
+    const b = document.createElement("button");
+    b.className = "opt"; b.textContent = word;
+    b.onclick = () => pick(word, b);
+    box.appendChild(b);
+  });
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function pick(word, btn){
+  const R = ROUNDS[r];
+  document.querySelectorAll("#opts .opt").forEach(b => b.disabled = true);
+  btn.classList.add("picked");
+  $("blank").textContent = word;
+  const sorted = [...R.w].sort((a,b) => b[1]-a[1]);
+  const best = sorted[0][0];
+  const rest = Math.max(0, 100 - R.w.reduce((t,x) => t + x[1], 0));
+  const rows = sorted.concat(rest ? [["other words", rest]] : []);
+  $("bars").innerHTML = rows.map(([w,p]) =>
+    `<div class="bar${w===best?" top":""}${w===word?" mine":""}">
+       <span class="w">${esc(w)}${w===word?'<span class="you">your pick</span>':""}</span>
+       <span class="track"><span class="fill" data-p="${p}"></span></span>
+       <span class="pct">${p}%</span></div>`).join("");
+  requestAnimationFrame(() => requestAnimationFrame(() =>
+    document.querySelectorAll("#bars .fill").forEach(f => f.style.width = f.dataset.p + "%")));
+  const hit = word === best;
+  if (hit){ score += 10; matches++; setScore(); }
+  const v = $("verdict");
+  v.className = "verdict " + (hit ? "ok" : "no");
+  v.textContent = hit ? "+10. You picked the AI’s top word."
+                      : `The AI’s top word is “${best}”.`;
+  $("lesson").innerHTML = R.l;
+  $("next").textContent = r === ROUNDS.length - 1 ? "Bonus round" : "Next round";
+  $("reveal").classList.remove("hidden");
+  setTimeout(() => $("reveal").scrollIntoView({behavior:"smooth", block:"start"}), 150);
+}
+
+$("next").onclick = () => { r++; r < ROUNDS.length ? startRound() : startBuild(); };
+
+function renderBuilt(el, words, depth){
+  el.innerHTML = esc(START) + words.map((w,i) =>
+    " " + (i === words.length-1 ? `<span class="new">${esc(w)}</span>` : esc(w))).join("") +
+    (words.length === depth ? "." : " …");
+}
+function startBuild(){
+  show("build"); setProg(ROUNDS.length);
+  mine = []; node = TREE;
+  $("bdone").classList.add("hidden");
+  renderBuilt($("built"), mine, 3);
+  buildStep();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function buildStep(){
+  const box = $("bopts"); box.innerHTML = "";
+  choices(node).sort((a,b) => b[1]-a[1]).forEach(([w,p]) => {
+    const b = document.createElement("button");
+    b.className = "opt"; b.innerHTML = `${esc(w)}<small>${p}%</small>`;
+    b.onclick = () => {
+      mine.push(w); renderBuilt($("built"), mine, 3);
+      const nxt = node[w];
+      if (typeof nxt === "object"){ node = nxt.next; buildStep(); } else finishBuild();
+    };
+    box.appendChild(b);
+  });
+}
+function finishBuild(){
+  $("bopts").innerHTML = "";
+  setProg(TOTAL);
+  $("bdone").classList.remove("hidden");
+  // greedy path: always the top word, following the tree
+  const path = []; let n = TREE;
+  while (n && typeof n === "object"){ const w = topWord(n); path.push(w); n = typeof n[w] === "object" ? n[w].next : null; }
+  const el = $("aibuilt"); let i = 0; el.innerHTML = esc(START) + " …";
+  const tick = () => { i++; renderBuilt(el, path.slice(0,i), path.length); if (i < path.length) setTimeout(tick, 650); };
+  setTimeout(tick, 500);
+  setTimeout(() => $("bdone").scrollIntoView({behavior:"smooth", block:"start"}), 150);
+}
+
+$("finish").onclick = () => {
+  show("end");
+  $("final").textContent = score + " / " + (ROUNDS.length*10);
+  const msg = matches >= 4 ? "You predict text like a chatbot."
+            : matches >= 2 ? "You and the AI agree on the easy ones."
+            : "You think like a human, not a chatbot.";
+  $("finalmsg").textContent = `You matched the AI’s top word in ${matches} of ${ROUNDS.length} rounds. ${msg}`;
+  $("buildans").classList.add("hidden"); $("showbuild").classList.remove("hidden");
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+$("showbuild").onclick = () => { $("buildans").classList.remove("hidden"); $("showbuild").classList.add("hidden"); };
+$("again").onclick = () => { r = 0; score = 0; matches = 0; setScore(); startRound(); };
+$("start").onclick = startRound;
+$("code").href = CODE_URL;
+</script>
+</body>
+</html>
