@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fix the Model</title>
+<meta name="description" content="A 5-minute game: a mango-ripeness AI is failing. Choose better training data and fix it.">
+<style>
+  :root{
+    --maroon:#760F0B; --maroon-dark:#4E0A08; --gold:#D6A030; --gold-tint:#FCF4E2;
+    --bg:#FAF7F2; --card:#FFFFFF; --ink:#232323; --muted:#5F5F64; --line:#E4DED6;
+    --ok:#1F7A4D; --ok-tint:#E6F4EC; --bad:#A0300C; --bad-tint:#FBECE6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Times New Roman",Times,"Liberation Serif",serif;
+    -webkit-tap-highlight-color:transparent}
+  body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+  header{background:var(--maroon);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  header h1{font-size:17px;margin:0;font-weight:700}
+  .pill{background:var(--gold);color:var(--maroon-dark);font-weight:800;font-size:14px;border-radius:999px;padding:5px 12px;white-space:nowrap}
+  main{flex:1;width:100%;max-width:560px;margin:0 auto;padding:18px 16px 28px}
+  .eyebrow{font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--maroon);margin:0 0 6px}
+  h2{font-size:25px;line-height:1.2;margin:0 0 10px}
+  h3{font-size:17px;margin:0 0 8px}
+  p{font-size:16px;line-height:1.5;margin:0 0 12px}
+  .muted{color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  button{font:inherit;cursor:pointer;border:none}
+  .primary{display:block;width:100%;background:var(--maroon);color:#fff;font-size:18px;font-weight:800;border-radius:12px;padding:16px;margin-top:14px}
+  .primary:disabled{background:#B9A9A4;cursor:default}
+  .ghost{display:block;width:100%;background:transparent;color:var(--maroon);font-size:16px;font-weight:700;border:2px solid var(--maroon);border-radius:12px;padding:13px;margin-top:10px;text-decoration:none;text-align:center}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .m{background:#fff;border:2px solid var(--line);border-radius:12px;padding:6px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:96px;justify-content:flex-end;position:relative}
+  .m svg{display:block}
+  .m .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+  .m .lab.r{color:#B7791F} .m .lab.u{color:#2F7D32}
+  .m.sel{border-color:var(--maroon);background:var(--gold-tint)}
+  .m.sel::after{content:"✓";position:absolute;top:4px;right:6px;font-weight:900;color:var(--maroon);font-size:14px}
+  .m.wrong{border-color:var(--bad);background:var(--bad-tint)}
+  .m.right{border-color:#BFDCCB}
+  .m .pred{font-size:11px;font-weight:800}
+  .m.wrong .pred{color:var(--bad)} .m.right .pred{color:var(--ok)}
+  .acc{display:flex;align-items:baseline;gap:10px;margin:2px 0 6px}
+  .acc b{font-size:48px;font-weight:900;line-height:1}
+  .acc.low b{color:var(--bad)} .acc.high b{color:var(--ok)} .acc.mid b{color:#B7791F}
+  .meter{height:12px;background:#F1ECE5;border-radius:8px;overflow:hidden;margin-bottom:12px}
+  .meter i{display:block;height:100%;width:0;transition:width .8s}
+  .lesson{border-left:4px solid var(--maroon);background:#FBEFED;padding:12px 14px;border-radius:6px;font-size:15px;line-height:1.5}
+  .opts{display:grid;gap:8px}
+  .opt{background:#fff;border:2px solid var(--line);border-radius:12px;padding:13px 12px;font-size:16px;font-weight:700;text-align:left;color:var(--ink)}
+  .opt.good{border-color:var(--ok);background:var(--ok-tint)}
+  .opt.badc{border-color:var(--bad);background:var(--bad-tint)}
+  .count{font-weight:800;color:var(--maroon)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:0 0 10px}
+  .big{font-size:56px;font-weight:900;color:var(--maroon);line-height:1;margin:6px 0}
+  ol.lessons{padding-left:20px;margin:6px 0 0}
+  ol.lessons li{margin-bottom:10px;line-height:1.45}
+  .hidden{display:none !important}
+  footer{text-align:center;font-size:12px;color:var(--muted);padding:10px 16px 18px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand img{width:40px;height:40px;flex:none}
+  .logos{display:flex;justify-content:center;align-items:center;gap:22px;margin:0 0 10px}
+  .logos img{height:46px;width:auto}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="data:image/png;base64,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" alt="FACTS-H Lab logo"><h1>Fix the Model</h1></div>
+  <span class="pill" id="stage">Step 1 of 3</span>
+</header>
+<main>
+
+  <!-- Intro -->
+  <section id="intro">
+    <p class="eyebrow">Game 3 of 3</p>
+    <h2>Help a farmer build an AI!</h2>
+    <p>A farmer in Kottayam wants an AI that sorts mangoes into <b>ripe</b> and <b>unripe</b>. A ripe mango is <b>yellow</b>. An unripe mango is <b>green</b>. Size does not matter.</p>
+    <p>Someone trained an AI, but it keeps making mistakes. <b>Can you find the problem and fix it?</b></p>
+    <p class="muted">3 steps. About 5 minutes.</p>
+    <button class="primary" id="start">Start</button>
+  </section>
+
+  <!-- Step 1: the broken model -->
+  <section id="s1" class="hidden">
+    <p class="eyebrow">Step 1: Why is the AI wrong?</p>
+    <div class="card">
+      <h3>The 4 mangoes it learned from</h3>
+      <div class="grid" id="oldtrain"></div>
+    </div>
+    <div class="card">
+      <h3>Test: 12 new mangoes from the farm</h3>
+      <div class="legend"><span>Green border = AI correct</span><span>Red = AI wrong</span></div>
+      <div class="grid" id="test1"></div>
+      <div style="height:12px"></div>
+      <div class="acc low" id="acc1"><b>…</b><span>correct</span></div>
+      <div class="meter"><i id="m1" style="background:var(--bad)"></i></div>
+    </div>
+    <div class="card">
+      <h3>Look at the red ones. Is the AI looking at colour or size?</h3>
+      <div class="opts" id="why"></div>
+      <div id="whyans" class="hidden" style="margin-top:12px">
+        <div class="lesson"><b>The AI is looking at size, not colour.</b> In the training data, every ripe mango was big and every unripe mango was small. So it learned “big means ripe”. Small ripe mangoes and big unripe mangoes fool it. This is <b>bias in the training data</b>, the same thing you saw in the live demo.</div>
+        <button class="primary" id="go2">Fix it</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Step 2: choose training data -->
+  <section id="s2" class="hidden">
+    <p class="eyebrow">Step 2: Now you’re the AI engineer!</p>
+    <h2>Choose mangoes to teach your AI</h2>
+    <p>Tap to pick <b>up to 6</b> mangoes. These are your <b>training data</b>. Choose carefully: the AI can only learn from what you show it.</p>
+    <div class="card">
+      <div class="grid" id="pool"></div>
+      <p style="margin:12px 0 0">Selected: <span class="count" id="cnt">0</span> / 6 <span class="muted" id="need"></span></p>
+    </div>
+    <button class="primary" id="train" disabled>Train my AI</button>
+  </section>
+
+  <!-- Step 3: result -->
+  <section id="s3" class="hidden">
+    <p class="eyebrow">Step 3: Let’s test your AI!</p>
+    <div class="card">
+      <h3>Same 12 test mangoes</h3>
+      <div class="grid" id="test2"></div>
+      <div style="height:12px"></div>
+      <div class="acc" id="acc2"><b>…</b><span>correct</span></div>
+      <div class="meter"><i id="m2"></i></div>
+      <div class="lesson" id="res"></div>
+    </div>
+    <button class="ghost" id="retry">Try different mangoes</button>
+    <button class="primary" id="done">Finish</button>
+  </section>
+
+  <!-- End -->
+  <section id="end" class="hidden">
+    <p class="eyebrow">Your result</p>
+    <p>The first AI scored <b id="e1"></b>. Your best AI scored:</p>
+    <div class="big" id="e2"></div>
+    <div class="card">
+      <p class="eyebrow">What you just learned</p>
+      <ol class="lessons">
+        <li>AI learns <b>whatever pattern it finds in the examples</b>, even one we did not want, like size or background.</li>
+        <li><b>Good examples help AI learn better.</b> You did not change the AI at all. You only changed the examples, and the score changed.</li>
+        <li><b>Show AI different kinds of examples:</b> small and big, green and yellow, in every combination.</li>
+      </ol>
+    </div>
+    <p class="muted">Raise your hand if your model reached 100%.</p>
+    <a class="ghost" id="code" target="_blank" rel="noopener">See how this game is built on GitHub</a>
+    <button class="ghost" id="again">Play again</button>
+  </section>
+</main>
+<footer><div class="logos"><img src="data:image/png;base64,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" alt="IIIT Kottayam logo"><img src="data:image/png;base64,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" alt="FACTS-H Lab logo"></div>Dr. Ansith S, FACTS-H Lab, IIIT Kottayam<br>A simple AI model (a nearest-centroid classifier) that looks at two things: colour and size.</footer>
+
+<script>
+// ---- Data ---------------------------------------------------------------
+// Each mango: c = colour (0 green → 1 yellow), s = size (0 small → 1 big).
+// The truth: ripe if and only if the colour is yellow (c > 0.5).
+const CODE_URL = "https://github.com/ansiths-iiitk/ai-games";
+const OLD_TRAIN = [ {c:.72,s:.92}, {c:.68,s:.96}, {c:.30,s:.06}, {c:.34,s:.10} ];
+const TEST = [
+  {c:.90,s:.85},{c:.78,s:.70},{c:.88,s:.20},{c:.75,s:.12},{c:.84,s:.32},{c:.70,s:.90},
+  {c:.10,s:.15},{c:.22,s:.28},{c:.15,s:.88},{c:.28,s:.75},{c:.12,s:.62},{c:.30,s:.10}
+];
+const POOL = [
+  {c:.88,s:.90},{c:.12,s:.88},{c:.82,s:.15},{c:.18,s:.12},
+  {c:.76,s:.55},{c:.25,s:.50},{c:.92,s:.30},{c:.08,s:.70},
+  {c:.85,s:.65},{c:.20,s:.35},{c:.80,s:.80},{c:.15,s:.20}
+];
+// -------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const ripe = m => m.c > .5;
+const show = id => ["intro","s1","s2","s3","end"].forEach(x => $(x).classList.toggle("hidden", x !== id));
+let picked = new Set(), best = 0, oldAcc = 0;
+
+function mangoSVG(m){
+  // colour from green (c=0) to yellow-orange (c=1); size 22..40 px
+  const g = [96,160,52], y = [242,178,40];
+  const col = g.map((v,i) => Math.round(v + (y[i]-v)*m.c));
+  const rx = 16 + 12*m.s, ry = 12 + 9*m.s;
+  const w = 64, h = 52, cx = w/2, cy = h - ry - 2;
+  const fill = `rgb(${col.join(",")})`, dark = `rgb(${col.map(v => Math.round(v*.78)).join(",")})`;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+    <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="${dark}" stroke-width="1.5" transform="rotate(-18 ${cx} ${cy})"/>
+    <ellipse cx="${cx - rx*.35}" cy="${cy - ry*.4}" rx="${rx*.28}" ry="${ry*.18}" fill="#fff" opacity=".35" transform="rotate(-18 ${cx} ${cy})"/>
+    <path d="M${cx + rx*.5} ${cy - ry*.9} q4 -7 9 -8" stroke="#5B3A1E" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M${cx + rx*.55} ${cy - ry*.95} q8 -4 12 2 q-7 3 -12 -2z" fill="#3E8E3E"/></svg>`;
+}
+function cell(m, extra, labelHTML){
+  return `<div class="m ${extra||""}">${mangoSVG(m)}${labelHTML}</div>`;
+}
+const lab = m => `<span class="lab ${ripe(m)?"r":"u"}">${ripe(m)?"ripe":"unripe"}</span>`;
+
+// nearest-centroid classifier on (colour, size)
+function train(data){
+  const avg = arr => ({ c: arr.reduce((t,m)=>t+m.c,0)/arr.length, s: arr.reduce((t,m)=>t+m.s,0)/arr.length });
+  const R = data.filter(ripe), U = data.filter(m => !ripe(m));
+  return { r: avg(R), u: avg(U) };
+}
+function predict(model, m){
+  const d = (a) => (a.c-m.c)**2 + (a.s-m.s)**2;
+  return d(model.r) < d(model.u);
+}
+function runTest(model, gridId, accId, meterId){
+  let ok = 0;
+  $(gridId).innerHTML = TEST.map(m => {
+    const p = predict(model, m), good = p === ripe(m);
+    if (good) ok++;
+    return cell(m, good ? "right" : "wrong", `<span class="pred">AI: ${p?"ripe":"unripe"}</span>`);
+  }).join("");
+  const pct = Math.round(100*ok/TEST.length);
+  const acc = $(accId);
+  acc.className = "acc " + (pct >= 100 ? "high" : pct >= 75 ? "mid" : "low");
+  acc.querySelector("b").textContent = pct + "%";
+  const bar = $(meterId);
+  bar.style.background = pct >= 100 ? "var(--ok)" : pct >= 75 ? "#B7791F" : "var(--bad)";
+  setTimeout(() => bar.style.width = pct + "%", 60);
+  return pct;
+}
+
+function step1(){
+  show("s1"); $("stage").textContent = "Step 1 of 3";
+  $("oldtrain").innerHTML = OLD_TRAIN.map(m => cell(m, "", lab(m))).join("");
+  oldAcc = runTest(train(OLD_TRAIN), "test1", "acc1", "m1");
+  const opts = [
+    ["Colour", false],
+    ["Size", true],
+    ["It needs a bigger computer", false],
+    ["It is just guessing", false]
+  ];
+  $("whyans").classList.add("hidden");
+  $("why").innerHTML = opts.map(([t,g],i) => `<button class="opt" data-i="${i}" data-g="${g}">${t}</button>`).join("");
+  document.querySelectorAll("#why .opt").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#why .opt").forEach(x => { x.disabled = true; if (x.dataset.g === "true") x.classList.add("good"); });
+    if (b.dataset.g !== "true") b.classList.add("badc");
+    $("whyans").classList.remove("hidden");
+    setTimeout(() => $("whyans").scrollIntoView({behavior:"smooth", block:"start"}), 120);
+  });
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function step2(){
+  show("s2"); $("stage").textContent = "Step 2 of 3";
+  picked = new Set();
+  renderPool();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function renderPool(){
+  $("pool").innerHTML = POOL.map((m,i) => `<div class="m ${picked.has(i)?"sel":""}" data-i="${i}" role="button" tabindex="0">${mangoSVG(m)}${lab(m)}</div>`).join("");
+  document.querySelectorAll("#pool .m").forEach(el => el.onclick = () => {
+    const i = +el.dataset.i;
+    if (picked.has(i)) picked.delete(i); else if (picked.size < 6) picked.add(i);
+    renderPool();
+  });
+  const data = [...picked].map(i => POOL[i]);
+  const hasR = data.some(ripe), hasU = data.some(m => !ripe(m));
+  $("cnt").textContent = picked.size;
+  $("need").textContent = picked.size && !(hasR && hasU) ? "(pick at least one ripe and one unripe)" : "";
+  $("train").disabled = !(hasR && hasU);
+}
+$("train").onclick = () => {
+  show("s3"); $("stage").textContent = "Step 3 of 3";
+  const data = [...picked].map(i => POOL[i]);
+  const pct = runTest(train(data), "test2", "acc2", "m2");
+  best = Math.max(best, pct);
+  $("res").innerHTML = pct >= 100
+    ? "<b>100%.</b> You gave the AI big and small mangoes on both sides, so size no longer helped it. It had to use colour."
+    : pct > oldAcc
+      ? "<b>Better.</b> Your ripe mangoes are still mostly one size. Add a big unripe mango and a small ripe one."
+      : "<b>No better yet.</b> Are your ripe mangoes mostly one size? Mix big and small on both sides.";
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+$("retry").onclick = step2;
+$("done").onclick = () => {
+  show("end"); $("stage").textContent = "Done";
+  $("e1").textContent = oldAcc + "%";
+  $("e2").textContent = best + "%";
+  window.scrollTo({top:0, behavior:"smooth"});
+};
+$("go2").onclick = step2;
+$("start").onclick = step1;
+$("again").onclick = () => { best = 0; step1(); };
+$("code").href = CODE_URL;
+</script>
+</body>
+</html>
